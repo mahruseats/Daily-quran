@@ -7,6 +7,7 @@ import {
   Copy,
   Check,
   Sparkles,
+  ArrowLeft,
 } from 'lucide-react';
 import { RabbanaDua, Bookmark as BookmarkType, AppLanguage } from '../types';
 import { RABBANA_DUAS } from '../data/rabbanaDuas';
@@ -19,6 +20,7 @@ interface RabbanaDuasViewProps {
   playingAudioUrl: string | null;
   isPlayingAudio: boolean;
   language?: AppLanguage;
+  onBack?: () => void;
 }
 
 export const RabbanaDuasView: React.FC<RabbanaDuasViewProps> = ({
@@ -29,6 +31,7 @@ export const RabbanaDuasView: React.FC<RabbanaDuasViewProps> = ({
   playingAudioUrl,
   isPlayingAudio,
   language = 'bn',
+  onBack,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -155,7 +158,17 @@ export const RabbanaDuasView: React.FC<RabbanaDuasViewProps> = ({
     <div className="space-y-4 pb-28">
       {/* Header Banner */}
       <div className="rounded-3xl bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-950 p-6 text-white text-center shadow-lg border border-emerald-800/40 relative overflow-hidden">
-        <div className="relative z-10 max-w-md mx-auto">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-900/80 hover:bg-emerald-800 text-xs font-semibold text-emerald-100 border border-emerald-700/60 transition shadow-sm"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>{isBangla ? 'সূরা তালিকা' : 'Surah List'}</span>
+          </button>
+        )}
+
+        <div className="relative z-10 max-w-md mx-auto pt-2">
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 px-3 py-1 rounded-full bg-emerald-900/60 border border-amber-400/30 mb-2">
             <Sparkles className="w-3 h-3" />
             {isBangla ? 'পবিত্র কুরআনের শ্রেষ্ঠ মুনাজাত' : 'Essential Quranic Supplications'}

@@ -8,6 +8,8 @@ import { ThinSalahTopBar } from './components/ThinSalahTopBar';
 import { SURAH_LIST } from './data/surahList';
 import { AppSettings, Bookmark, DailyGoalProgress, LastRead, SurahMeta, AppLanguage } from './types';
 import { getAyahAudioUrl } from './utils/quranApi';
+import { initializeAdMob, showInterstitialAd } from './services/admobService';
+import { AdMobInterstitialModal } from './components/AdMobInterstitialModal';
 
 // Lazy-load secondary views to reduce initial bundle size without visual changes
 const RabbanaDuasView = lazy(() =>
@@ -37,6 +39,11 @@ export const App: React.FC = () => {
     if (saved === 'light') return false;
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+
+  useEffect(() => {
+    // Initialize Google Mobile Ads (AdMob)
+    initializeAdMob();
+  }, []);
 
   useEffect(() => {
     if (darkMode) {
@@ -361,14 +368,18 @@ export const App: React.FC = () => {
         setShowDailyTaskModal(false);
         return;
       }
-      // 2. Return from Surah Detail to Surah List
+      // 2. Return from Surah Detail to Surah List (trigger Interstitial Ad)
       if (selectedSurahNumber !== null) {
+        showInterstitialAd();
         setSelectedSurahNumber(null);
         setJumpToAyahNumber(undefined);
         return;
       }
-      // 3. Return from other tabs to primary Surahs tab
+      // 3. Return from other tabs to primary Surahs tab (trigger ad if exiting Rabbana Duas)
       if (currentTab !== 'surahs') {
+        if (currentTab === 'duas') {
+          showInterstitialAd();
+        }
         setCurrentTab('surahs');
         return;
       }
@@ -390,6 +401,8 @@ export const App: React.FC = () => {
   };
 
   const handleBackFromSurah = () => {
+    // Trigger Google AdMob Interstitial Ad when clicking back from Surah
+    showInterstitialAd();
     if (window.history.state?.view === 'surah') {
       window.history.back();
     } else {
@@ -399,6 +412,10 @@ export const App: React.FC = () => {
   };
 
   const handleSelectTab = (tab: NavTab) => {
+    // Trigger Google AdMob Interstitial Ad when exiting from Rabbana Duas
+    if (currentTab === 'duas' && tab !== 'duas') {
+      showInterstitialAd();
+    }
     if (currentTab !== tab || selectedSurahNumber !== null) {
       try {
         window.history.pushState({ view: 'tab', tab }, '');
@@ -511,6 +528,10 @@ export const App: React.FC = () => {
                     playingAudioUrl={activeAudio?.audioUrl ?? null}
                     isPlayingAudio={activeAudio?.isPlaying ?? false}
                     language={language}
+                    onBack={() => {
+                      showInterstitialAd();
+                      handleSelectTab('surahs');
+                    }}
                   />
                 </Suspense>
               )}
@@ -605,6 +626,9 @@ export const App: React.FC = () => {
           />
         </Suspense>
       )}
+
+      {/* Google AdMob Interstitial Ad Preview / Modal */}
+      <AdMobInterstitialModal />
     </div>
   );
 };
