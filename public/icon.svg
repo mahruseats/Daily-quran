@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#022c22" />
+      <stop offset="50%" stop-color="#064e3b" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Outer Islamic 8-point geometric rosette border -->
+  <g fill="none" stroke="url(#goldGrad)" stroke-width="3" opacity="0.35">
+    <rect x="76" y="76" width="360" height="360" rx="40" />
+    <rect x="76" y="76" width="360" height="360" rx="40" transform="rotate(45 256 256)" />
+    <circle cx="256" cy="256" r="190" />
+  </g>
+
+  <!-- Crescent & Star -->
+  <path d="M 230,135 A 45,45 0 1,0 275,178 A 36,36 0 1,1 230,135 Z" fill="url(#goldGrad)" filter="url(#glow)" />
+  <polygon points="268,142 272,152 282,152 274,158 277,168 268,162 260,168 263,158 255,152 265,152" fill="url(#goldGrad)" />
+
+  <!-- Open Quran Book on Rehal -->
+  <!-- Left Page -->
+  <path d="M 140,240 Q 190,230 250,250 L 250,350 Q 190,330 140,340 Z" fill="#ffffff" stroke="url(#goldGrad)" stroke-width="4" />
+  <!-- Left Page Lines -->
+  <path d="M 160,265 Q 200,255 235,270" stroke="#059669" stroke-width="3" stroke-linecap="round" />
+  <path d="M 160,285 Q 200,275 235,290" stroke="#059669" stroke-width="3" stroke-linecap="round" />
+  <path d="M 160,305 Q 200,295 235,310" stroke="#059669" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Right Page -->
+  <path d="M 372,240 Q 322,230 262,250 L 262,350 Q 322,330 372,340 Z" fill="#ffffff" stroke="url(#goldGrad)" stroke-width="4" />
+  <!-- Right Page Lines -->
+  <path d="M 352,265 Q 312,255 277,270" stroke="#059669" stroke-width="3" stroke-linecap="round" />
+  <path d="M 352,285 Q 312,275 277,290" stroke="#059669" stroke-width="3" stroke-linecap="round" />
+  <path d="M 352,305 Q 312,295 277,310" stroke="#059669" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Center Book Spine / Ribbon -->
+  <line x1="256" y1="245" x2="256" y2="365" stroke="url(#goldGrad)" stroke-width="5" stroke-linecap="round" />
+  <path d="M 256,365 Q 262,385 272,390" stroke="#f59e0b" stroke-width="4" fill="none" stroke-linecap="round" />
+
+  <!-- Rehal (Wooden stand) base -->
+  <path d="M 170,350 L 130,405 L 160,405 L 205,355" fill="url(#goldGrad)" opacity="0.9" />
+  <path d="M 342,350 L 382,405 L 352,405 L 307,355" fill="url(#goldGrad)" opacity="0.9" />
+  <path d="M 230,352 L 282,352 L 256,395 Z" fill="#b45309" opacity="0.8" />
+</svg>

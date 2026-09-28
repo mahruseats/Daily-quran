@@ -1,0 +1,10 @@
+{
+  "name": "Quran Al Kareem",
+  "description": "Complete Quran app with Bangla translation, live sensor-based Qibla compass, offline recitations, tafsir, prayer times, 40 Rabbana duas, and reading progress bookmarks.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
