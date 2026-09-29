@@ -8,8 +8,9 @@ import { ThinSalahTopBar } from './components/ThinSalahTopBar';
 import { SURAH_LIST } from './data/surahList';
 import { AppSettings, Bookmark, DailyGoalProgress, LastRead, SurahMeta, AppLanguage } from './types';
 import { getAyahAudioUrl } from './utils/quranApi';
-import { initializeAdMob, showInterstitialAd } from './services/admobService';
+import { initializeAdMob, showInterstitialAd, hideBannerAd } from './services/admobService';
 import { AdMobInterstitialModal } from './components/AdMobInterstitialModal';
+import { AdMobBanner } from './components/AdMobBanner';
 
 // Lazy-load secondary views to reduce initial bundle size without visual changes
 const RabbanaDuasView = lazy(() =>
@@ -370,6 +371,7 @@ export const App: React.FC = () => {
       }
       // 2. Return from Surah Detail to Surah List (trigger Interstitial Ad)
       if (selectedSurahNumber !== null) {
+        hideBannerAd();
         showInterstitialAd();
         setSelectedSurahNumber(null);
         setJumpToAyahNumber(undefined);
@@ -401,6 +403,8 @@ export const App: React.FC = () => {
   };
 
   const handleBackFromSurah = () => {
+    // Hide AdMob banner when exiting the Surah reader
+    hideBannerAd();
     // Trigger Google AdMob Interstitial Ad when clicking back from Surah
     showInterstitialAd();
     if (window.history.state?.view === 'surah') {
@@ -597,6 +601,7 @@ export const App: React.FC = () => {
           onChangeSpeed={setPlaybackSpeed}
           onChangeQari={handleChangeQari}
           language={language}
+          hasBottomBanner={selectedSurahNumber !== null}
         />
       )}
 
@@ -629,6 +634,9 @@ export const App: React.FC = () => {
 
       {/* Google AdMob Interstitial Ad Preview / Modal */}
       <AdMobInterstitialModal />
+
+      {/* Google AdMob Bottom Banner Ad (320x50 when reading a Surah) */}
+      <AdMobBanner />
     </div>
   );
 };

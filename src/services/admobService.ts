@@ -1,10 +1,19 @@
-import { AdMob, InterstitialAdPluginEvents } from '@capacitor-community/admob';
+import {
+  AdMob,
+  InterstitialAdPluginEvents,
+  BannerAdSize,
+  BannerAdPosition,
+  BannerAdPluginEvents,
+} from '@capacitor-community/admob';
 import { Capacitor } from '@capacitor/core';
 
 // Official Android Test Interstitial Ad Unit ID requested by user
 export const ADMOB_INTERSTITIAL_TEST_ID = 'ca-app-pub-3940256099942544/1033173712';
 
-// Listeners for web preview fallback
+// Official Android Test Banner Ad Unit ID (Google Mobile Ads standard 320x50 test banner)
+export const ADMOB_BANNER_TEST_ID = 'ca-app-pub-3940256099942544/6300978111';
+
+// Listeners for web preview fallback (Interstitial)
 type AdEventListener = (visible: boolean) => void;
 const webAdListeners: Set<AdEventListener> = new Set();
 
@@ -15,9 +24,21 @@ export const subscribeWebAdModal = (listener: AdEventListener) => {
   };
 };
 
+// Listeners for web preview banner (Surah reading bottom banner)
+type BannerEventListener = (visible: boolean) => void;
+const bannerListeners: Set<BannerEventListener> = new Set();
+
+export const subscribeBannerAd = (listener: BannerEventListener) => {
+  bannerListeners.add(listener);
+  return () => {
+    bannerListeners.delete(listener);
+  };
+};
+
 let isInitialized = false;
 let isAdPrepared = false;
 let isPreparing = false;
+let isBannerVisible = false;
 
 /**
  * Initializes Google Mobile Ads (AdMob) SDK.
@@ -44,7 +65,7 @@ export async function initializeAdMob(): Promise<void> {
         prepareInterstitial();
       });
 
-      // Prepare first ad
+      // Prepare first interstitial ad
       await prepareInterstitial();
     } catch (err) {
       console.warn('AdMob native initialization warning:', err);
@@ -104,5 +125,50 @@ export async function showInterstitialAd(onClose?: () => void): Promise<void> {
   } else {
     // In web preview / PWA, trigger the visual Test AdMob dialog
     webAdListeners.forEach((fn) => fn(true));
+  }
+}
+
+/**
+ * Shows the standard bottom Banner Ad (320x50 density-independent pixels).
+ * Displayed while reading a Surah.
+ */
+export async function showBannerAd(): Promise<void> {
+  if (isBannerVisible) return;
+  isBannerVisible = true;
+
+  // Notify web UI listeners so web preview also renders the compliant 320x50 AdMob banner
+  bannerListeners.forEach((fn) => fn(true));
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await AdMob.showBanner({
+        adId: ADMOB_BANNER_TEST_ID,
+        adSize: BannerAdSize.BANNER, // Small 320x50 standard banner compliant with AdMob policies
+        position: BannerAdPosition.BOTTOM_CENTER,
+        margin: 0,
+        isTesting: true,
+      });
+    } catch (err) {
+      console.warn('AdMob showBanner native warning:', err);
+    }
+  }
+}
+
+/**
+ * Hides / removes the bottom Banner Ad when leaving the Surah reader.
+ */
+export async function hideBannerAd(): Promise<void> {
+  if (!isBannerVisible) return;
+  isBannerVisible = false;
+
+  bannerListeners.forEach((fn) => fn(false));
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await AdMob.hideBanner();
+      await AdMob.removeBanner();
+    } catch (err) {
+      console.warn('AdMob hideBanner native warning:', err);
+    }
   }
 }

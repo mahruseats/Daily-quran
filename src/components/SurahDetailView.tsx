@@ -22,6 +22,7 @@ import {
 } from '../utils/quranApi';
 import { PRELOADED_SURAHS } from '../data/preloadedSurahs';
 import { convertTransliterationToBangla } from '../utils/banglaPronunciation';
+import { showBannerAd, hideBannerAd } from '../services/admobService';
 
 const SurahSearchModal = lazy(() =>
   import('./SurahSearchModal').then((m) => ({ default: m.SurahSearchModal }))
@@ -103,6 +104,14 @@ export const SurahDetailView: React.FC<SurahDetailViewProps> = ({
   const formatDigits = (num: number | string): string => {
     return isBangla ? toBanglaDigits(num) : num.toString();
   };
+
+  // Show Google AdMob Banner Ad at the bottom when reading a surah
+  useEffect(() => {
+    showBannerAd();
+    return () => {
+      hideBannerAd();
+    };
+  }, [surah.number]);
 
   // Load Ayahs
   useEffect(() => {
@@ -262,7 +271,7 @@ export const SurahDetailView: React.FC<SurahDetailViewProps> = ({
     : 'Medinan';
 
   return (
-    <div className="space-y-4 pb-32">
+    <div className="space-y-4 pb-44 sm:pb-48">
       {/* Top Header & Navigation */}
       <div className="sticky top-14 z-20 -mx-4 px-4 py-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
         <button

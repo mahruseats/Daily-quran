@@ -20,6 +20,7 @@ interface AudioPlayerBarProps {
   onChangeSpeed: (speed: number) => void;
   onChangeQari?: (qariId: string) => void;
   language?: AppLanguage;
+  hasBottomBanner?: boolean;
 }
 
 export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
@@ -39,6 +40,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   onChangeSpeed,
   onChangeQari,
   language = 'bn',
+  hasBottomBanner = false,
 }) => {
   const isBangla = language === 'bn';
 
@@ -161,7 +163,9 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   return (
     <div
       id="global-audio-player"
-      className="fixed bottom-2.5 sm:bottom-4 left-0 right-0 z-40 max-w-xl mx-auto px-2.5 sm:px-3 pointer-events-auto safe-area-bottom"
+      className={`fixed ${
+        hasBottomBanner ? 'bottom-[54px] sm:bottom-[58px]' : 'bottom-2.5 sm:bottom-4'
+      } left-0 right-0 z-40 max-w-xl mx-auto px-2.5 sm:px-3 pointer-events-auto safe-area-bottom transition-all duration-200`}
     >
       <div className="bg-emerald-950/95 text-white backdrop-blur-md rounded-2xl shadow-xl border border-emerald-700/50 p-3 transition-all">
         <audio
