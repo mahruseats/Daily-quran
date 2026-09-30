@@ -8,10 +8,10 @@ import {
 import { Capacitor } from '@capacitor/core';
 
 // Official Android Test Interstitial Ad Unit ID requested by user
-export const ADMOB_INTERSTITIAL_TEST_ID = 'ca-app-pub-3940256099942544/1033173712';
+export const ADMOB_INTERSTITIAL_TEST_ID = 'ca-app-pub-6512636168497393/5209356341';
 
 // Official Android Test Banner Ad Unit ID (Google Mobile Ads standard 320x50 test banner)
-export const ADMOB_BANNER_TEST_ID = 'ca-app-pub-3940256099942544/6300978111';
+export const ADMOB_BANNER_TEST_ID = 'ca-app-pub-6512636168497393/7040564338';
 
 // Listeners for web preview fallback (Interstitial)
 type AdEventListener = (visible: boolean) => void;
