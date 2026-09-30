@@ -198,3 +198,9 @@ export const removeNativeBanner = async (): Promise<void> => {
     console.warn('[AdMob] Failed to remove native banner:', err);
   }
 };
+
+// Aliases for banner functions
+export const showBannerAd = showNativeBanner;
+export const hideBannerAd = hideNativeBanner;
+export const removeBannerAd = removeNativeBanner;
+
