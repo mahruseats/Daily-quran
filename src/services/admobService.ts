@@ -1,174 +1,200 @@
+import { Capacitor } from '@capacitor/core';
 import {
   AdMob,
-  InterstitialAdPluginEvents,
+  BannerAdOptions,
   BannerAdSize,
   BannerAdPosition,
-  BannerAdPluginEvents,
+  InterstitialAdPluginEvents,
 } from '@capacitor-community/admob';
-import { Capacitor } from '@capacitor/core';
+import { ADMOB_CONFIG } from '../config/admob';
 
-// Official Android Test Interstitial Ad Unit ID requested by user
-export const ADMOB_INTERSTITIAL_TEST_ID = 'ca-app-pub-6512636168497393/5209356341';
+let isNativeInitialized = false;
+let isInterstitialPreloaded = false;
+let isPreloadingInterstitial = false;
+let lastInterstitialShowTime = 0;
 
-// Official Android Test Banner Ad Unit ID (Google Mobile Ads standard 320x50 test banner)
-export const ADMOB_BANNER_TEST_ID = 'ca-app-pub-6512636168497393/7040564338';
+// Minimum cooldown period between automatic interstitial popups (20 seconds)
+const INTERSTITIAL_COOLDOWN_MS = 20000;
 
-// Listeners for web preview fallback (Interstitial)
-type AdEventListener = (visible: boolean) => void;
-const webAdListeners: Set<AdEventListener> = new Set();
+type InterstitialWebListener = (onClose: () => void) => void;
+const webInterstitialListeners: Set<InterstitialWebListener> = new Set();
 
-export const subscribeWebAdModal = (listener: AdEventListener) => {
-  webAdListeners.add(listener);
+export const subscribeWebInterstitial = (listener: InterstitialWebListener): (() => void) => {
+  webInterstitialListeners.add(listener);
   return () => {
-    webAdListeners.delete(listener);
+    webInterstitialListeners.delete(listener);
   };
 };
 
-// Listeners for web preview banner (Surah reading bottom banner)
-type BannerEventListener = (visible: boolean) => void;
-const bannerListeners: Set<BannerEventListener> = new Set();
+export const initializeAdMob = async (): Promise<boolean> => {
+  if (!Capacitor.isNativePlatform()) {
+    return false;
+  }
 
-export const subscribeBannerAd = (listener: BannerEventListener) => {
-  bannerListeners.add(listener);
-  return () => {
-    bannerListeners.delete(listener);
-  };
+  if (isNativeInitialized) return true;
+
+  try {
+    await AdMob.initialize({
+      initializeForTesting: false,
+    });
+    isNativeInitialized = true;
+    return true;
+  } catch (err) {
+    console.warn('[AdMob] Failed to initialize native Google Mobile Ads SDK:', err);
+    return false;
+  }
 };
-
-let isInitialized = false;
-let isAdPrepared = false;
-let isPreparing = false;
-let isBannerVisible = false;
 
 /**
- * Initializes Google Mobile Ads (AdMob) SDK.
+ * Loads the interstitial ad in the background when the app starts or after an ad is closed.
  */
-export async function initializeAdMob(): Promise<void> {
-  if (isInitialized) return;
+export const preloadInterstitial = async (): Promise<boolean> => {
+  if (isPreloadingInterstitial) return false;
+  isPreloadingInterstitial = true;
 
   if (Capacitor.isNativePlatform()) {
     try {
-      await AdMob.initialize({
-        initializeForTesting: true,
-        testingDevices: ['2077ef9a63d2b398840261c8221a0c9b'],
+      await initializeAdMob();
+      await AdMob.prepareInterstitial({
+        adId: ADMOB_CONFIG.interstitialUnitId,
+        isTesting: false,
       });
-      isInitialized = true;
-
-      // Listen for dismiss event to automatically pre-load the next interstitial
-      AdMob.addListener(InterstitialAdPluginEvents.Dismissed, () => {
-        isAdPrepared = false;
-        prepareInterstitial();
-      });
-
-      AdMob.addListener(InterstitialAdPluginEvents.FailedToShow, () => {
-        isAdPrepared = false;
-        prepareInterstitial();
-      });
-
-      // Prepare first interstitial ad
-      await prepareInterstitial();
+      isInterstitialPreloaded = true;
+      console.log('[AdMob] Native Interstitial Ad loaded in background:', ADMOB_CONFIG.interstitialUnitId);
+      return true;
     } catch (err) {
-      console.warn('AdMob native initialization warning:', err);
+      console.warn('[AdMob] Native Interstitial failed to load in background:', err);
+      return false;
+    } finally {
+      isPreloadingInterstitial = false;
     }
-  } else {
-    // Web / preview environment
-    isInitialized = true;
   }
-}
+
+  // Web / PWA environment preload
+  isInterstitialPreloaded = true;
+  isPreloadingInterstitial = false;
+  console.log('[AdMob] Web Interstitial Ad preloaded in background for unit:', ADMOB_CONFIG.interstitialUnitId);
+  return true;
+};
 
 /**
- * Prepares / pre-loads the Interstitial Ad.
+ * Displays the loaded interstitial ad when the user triggers an action (e.g. exiting Quran reading, Duas, or Salah).
  */
-export async function prepareInterstitial(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) {
-    isAdPrepared = true;
+export const showInterstitialAd = async (onDismissed?: () => void): Promise<boolean> => {
+  const proceed = () => {
+    lastInterstitialShowTime = Date.now();
+    if (onDismissed) onDismissed();
+    // Preload next interstitial in background
+    setTimeout(() => {
+      preloadInterstitial().catch(() => {});
+    }, 1500);
+  };
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      if (!isInterstitialPreloaded) {
+        await preloadInterstitial();
+      }
+
+      let dismissed = false;
+      const safeProceed = () => {
+        if (!dismissed) {
+          dismissed = true;
+          proceed();
+        }
+      };
+
+      const dismissSub = await AdMob.addListener(InterstitialAdPluginEvents.Dismissed, () => {
+        dismissSub.remove();
+        safeProceed();
+      });
+
+      const failedSub = await AdMob.addListener(InterstitialAdPluginEvents.FailedToShow, () => {
+        failedSub.remove();
+        safeProceed();
+      });
+
+      await AdMob.showInterstitial();
+      isInterstitialPreloaded = false;
+      return true;
+    } catch (err) {
+      console.warn('[AdMob] Failed to show native interstitial:', err);
+      proceed();
+      return false;
+    }
+  }
+
+  // Web fallback modal
+  if (webInterstitialListeners.size > 0) {
+    webInterstitialListeners.forEach((listener) => {
+      listener(proceed);
+    });
+    return true;
+  }
+
+  // If no UI listener registered, continue seamlessly
+  proceed();
+  return false;
+};
+
+/**
+ * Convenience helper to show interstitial upon exiting a view (Quran reading, Duas, or Salah)
+ * with a friendly cooldown throttle so users aren't overwhelmed.
+ */
+export const showExitInterstitial = (
+  source: 'quran' | 'duas' | 'salah',
+  onExit: () => void,
+  force = false
+): void => {
+  const now = Date.now();
+  const timeSinceLast = now - lastInterstitialShowTime;
+
+  if (!force && timeSinceLast < INTERSTITIAL_COOLDOWN_MS) {
+    // Cooldown active, navigate immediately without ad interruption
+    onExit();
     return;
   }
 
-  if (isPreparing || isAdPrepared) return;
-  isPreparing = true;
+  console.log(`[AdMob] Triggering exit interstitial from ${source}`);
+  showInterstitialAd(onExit);
+};
+
+export const showNativeBanner = async (): Promise<boolean> => {
+  if (!Capacitor.isNativePlatform()) {
+    return false;
+  }
 
   try {
-    await AdMob.prepareInterstitial({
-      adId: ADMOB_INTERSTITIAL_TEST_ID,
-      isTesting: true,
-    });
-    isAdPrepared = true;
+    await initializeAdMob();
+    const options: BannerAdOptions = {
+      adId: ADMOB_CONFIG.bannerUnitId,
+      adSize: BannerAdSize.BANNER,
+      position: BannerAdPosition.BOTTOM_CENTER,
+      margin: 0,
+      isTesting: false,
+    };
+    await AdMob.showBanner(options);
+    return true;
   } catch (err) {
-    console.warn('Failed to prepare AdMob interstitial:', err);
-    isAdPrepared = false;
-  } finally {
-    isPreparing = false;
+    console.warn('[AdMob] Failed to show native banner:', err);
+    return false;
   }
-}
+};
 
-/**
- * Shows the interstitial ad if ready.
- * Only called when:
- * 1. User clicks back from a Surah
- * 2. User exits from Rabbana Duas
- */
-export async function showInterstitialAd(onClose?: () => void): Promise<void> {
-  if (Capacitor.isNativePlatform()) {
-    try {
-      if (!isAdPrepared) {
-        await prepareInterstitial();
-      }
-      await AdMob.showInterstitial();
-      isAdPrepared = false;
-      if (onClose) onClose();
-    } catch (err) {
-      console.warn('AdMob show interstitial native fallback:', err);
-      // Even if ad fails to show, allow user workflow to continue smoothly
-      if (onClose) onClose();
-    }
-  } else {
-    // In web preview / PWA, trigger the visual Test AdMob dialog
-    webAdListeners.forEach((fn) => fn(true));
+export const hideNativeBanner = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await AdMob.hideBanner();
+  } catch (err) {
+    console.warn('[AdMob] Failed to hide native banner:', err);
   }
-}
+};
 
-/**
- * Shows the standard bottom Banner Ad (320x50 density-independent pixels).
- * Displayed while reading a Surah.
- */
-export async function showBannerAd(): Promise<void> {
-  if (isBannerVisible) return;
-  isBannerVisible = true;
-
-  // Notify web UI listeners so web preview also renders the compliant 320x50 AdMob banner
-  bannerListeners.forEach((fn) => fn(true));
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await AdMob.showBanner({
-        adId: ADMOB_BANNER_TEST_ID,
-        adSize: BannerAdSize.BANNER, // Small 320x50 standard banner compliant with AdMob policies
-        position: BannerAdPosition.BOTTOM_CENTER,
-        margin: 0,
-        isTesting: true,
-      });
-    } catch (err) {
-      console.warn('AdMob showBanner native warning:', err);
-    }
+export const removeNativeBanner = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await AdMob.removeBanner();
+  } catch (err) {
+    console.warn('[AdMob] Failed to remove native banner:', err);
   }
-}
-
-/**
- * Hides / removes the bottom Banner Ad when leaving the Surah reader.
- */
-export async function hideBannerAd(): Promise<void> {
-  if (!isBannerVisible) return;
-  isBannerVisible = false;
-
-  bannerListeners.forEach((fn) => fn(false));
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await AdMob.hideBanner();
-      await AdMob.removeBanner();
-    } catch (err) {
-      console.warn('AdMob hideBanner native warning:', err);
-    }
-  }
-}
+};

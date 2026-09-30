@@ -1,0 +1,12 @@
+{
+  "appId": "com.dailyquran.app",
+  "appName": "Daily Quran",
+  "webDir": "dist",
+  "plugins": {
+    "AdMob": {
+      "appId": "pub-6512636168497393~1383777507",
+      "testingDevices": [],
+      "initializeForTesting": false
+    }
+  }
+}

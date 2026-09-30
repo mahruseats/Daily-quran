@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.dailyquran.app">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Daily Quran"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <!-- Google Mobile Ads / AdMob App ID Integration -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="pub-6512636168497393~1383777507" />
+
+        <!-- AdMob Banner Ad Unit ID Configuration -->
+        <meta-data
+            android:name="com.google.android.gms.ads.AD_UNIT_ID_BANNER"
+            android:value="ca-app-pub-6512636168497393/7040564338" />
+
+        <!-- AdMob Interstitial Ad Unit ID Configuration -->
+        <meta-data
+            android:name="com.google.android.gms.ads.AD_UNIT_ID_INTERSTITIAL"
+            android:value="ca-app-pub-6512636168497393/5209356341" />
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:name=".MainActivity"
+            android:label="Daily Quran"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
