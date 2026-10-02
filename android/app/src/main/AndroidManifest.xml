@@ -1,44 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.dailyquran.app">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permissions required for AdMob GMA Next-Gen SDK -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
+        android:name=".QuranApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Daily Quran"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.QuranAlKareem">
 
-        <!-- Google Mobile Ads / AdMob App ID Integration -->
+        <!-- AdMob Sample App ID metadata fallback for Google Play Services/UMP -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="pub-6512636168497393~1383777507" />
-
-        <!-- AdMob Banner Ad Unit ID Configuration -->
-        <meta-data
-            android:name="com.google.android.gms.ads.AD_UNIT_ID_BANNER"
-            android:value="ca-app-pub-6512636168497393/7040564338" />
-
-        <!-- AdMob Interstitial Ad Unit ID Configuration -->
-        <meta-data
-            android:name="com.google.android.gms.ads.AD_UNIT_ID_INTERSTITIAL"
-            android:value="ca-app-pub-6512636168497393/5209356341" />
+            android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:name=".MainActivity"
-            android:label="Daily Quran"
-            android:theme="@android:style/Theme.Material.Light.NoActionBar"
-            android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
+
 </manifest>

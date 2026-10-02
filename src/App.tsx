@@ -5,12 +5,12 @@ import { SurahListView } from './components/SurahListView';
 import { SurahDetailView } from './components/SurahDetailView';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { ThinSalahTopBar } from './components/ThinSalahTopBar';
-import { AdMobBanner } from './components/AdMobBanner';
-import { AdMobInterstitialModal } from './components/AdMobInterstitialModal';
-import { preloadInterstitial, showExitInterstitial } from './services/admobService';
 import { SURAH_LIST } from './data/surahList';
 import { AppSettings, Bookmark, DailyGoalProgress, LastRead, SurahMeta, AppLanguage } from './types';
 import { getAyahAudioUrl } from './utils/quranApi';
+import { AdMobBanner } from './components/AdMobBanner';
+import { AdMobInterstitial } from './components/AdMobInterstitial';
+import { adMobManager } from './services/admob';
 
 // Lazy-load secondary views to reduce initial bundle size without visual changes
 const RabbanaDuasView = lazy(() =>
@@ -63,6 +63,11 @@ export const App: React.FC = () => {
     setDarkMode((prev) => !prev);
   };
 
+  // Initialize AdMob GMA Next-Gen SDK on a background thread on startup
+  useEffect(() => {
+    adMobManager.initialize();
+  }, []);
+
   // Language state (Bangla or English)
   const [language, setLanguage] = useState<AppLanguage>(() => {
     const saved = localStorage.getItem('quran_app_language');
@@ -93,11 +98,6 @@ export const App: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
-
-  // Google Mobile Ads: Preload Interstitial Ad in background on app start
-  useEffect(() => {
-    preloadInterstitial().catch(() => {});
   }, []);
 
   // App settings state
@@ -369,20 +369,25 @@ export const App: React.FC = () => {
         setShowDailyTaskModal(false);
         return;
       }
-      // 2. Return from Surah Detail to Surah List (Exiting Quran)
+      // 2. Return from Surah Detail to Surah List (Exiting Surah)
       if (selectedSurahNumber !== null) {
-        showExitInterstitial('quran', () => {
+        adMobManager.showInterstitialAtTransition(() => {
           setSelectedSurahNumber(null);
           setJumpToAyahNumber(undefined);
         });
         return;
       }
-      // 3. Return from other tabs to primary Surahs tab (Exiting Duas or Salah)
+      // 3. Return from other tabs to primary Surahs tab
       if (currentTab !== 'surahs') {
-        const source = currentTab === 'duas' ? 'duas' : currentTab === 'prayer' ? 'salah' : 'quran';
-        showExitInterstitial(source, () => {
+        const isExitingDua = currentTab === 'duas';
+        const isExitingSalah = currentTab === 'prayer';
+        if (isExitingDua || isExitingSalah) {
+          adMobManager.showInterstitialAtTransition(() => {
+            setCurrentTab('surahs');
+          });
+        } else {
           setCurrentTab('surahs');
-        });
+        }
         return;
       }
     };
@@ -403,7 +408,7 @@ export const App: React.FC = () => {
   };
 
   const handleBackFromSurah = () => {
-    showExitInterstitial('quran', () => {
+    adMobManager.showInterstitialAtTransition(() => {
       if (window.history.state?.view === 'surah') {
         window.history.back();
       } else {
@@ -413,35 +418,28 @@ export const App: React.FC = () => {
     });
   };
 
-  const doSelectTab = (tab: NavTab) => {
-    if (currentTab !== tab || selectedSurahNumber !== null) {
-      try {
-        window.history.pushState({ view: 'tab', tab }, '');
-      } catch (e) {}
-    }
-    setSelectedSurahNumber(null);
-    setJumpToAyahNumber(undefined);
-    setCurrentTab(tab);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const handleSelectTab = (tab: NavTab) => {
-    // Exiting Quran reading to tab
-    if (selectedSurahNumber !== null) {
-      showExitInterstitial('quran', () => doSelectTab(tab));
-      return;
+    const isExitingSurah = selectedSurahNumber !== null;
+    const isExitingDua = currentTab === 'duas' && tab !== 'duas';
+    const isExitingSalah = currentTab === 'prayer' && tab !== 'prayer';
+
+    const executeTabChange = () => {
+      if (currentTab !== tab || selectedSurahNumber !== null) {
+        try {
+          window.history.pushState({ view: 'tab', tab }, '');
+        } catch (e) {}
+      }
+      setSelectedSurahNumber(null);
+      setJumpToAyahNumber(undefined);
+      setCurrentTab(tab);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    if (isExitingSurah || isExitingDua || isExitingSalah) {
+      adMobManager.showInterstitialAtTransition(executeTabChange);
+    } else {
+      executeTabChange();
     }
-    // Exiting Duas
-    if (currentTab === 'duas' && tab !== 'duas') {
-      showExitInterstitial('duas', () => doSelectTab(tab));
-      return;
-    }
-    // Exiting Salah / Prayer Times
-    if (currentTab === 'prayer' && tab !== 'prayer') {
-      showExitInterstitial('salah', () => doSelectTab(tab));
-      return;
-    }
-    doSelectTab(tab);
   };
 
   const handleOpenTasks = () => {
@@ -494,7 +492,9 @@ export const App: React.FC = () => {
       </header>
 
       {/* Main View Area */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-4 pb-28 sm:pb-32">
+      <main className={`max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-4 ${
+        selectedSurahMeta ? (activeAudio ? 'pb-44' : 'pb-32') : 'pb-20'
+      }`}>
           {/* If user clicked a specific Surah, show SurahDetailView */}
           {selectedSurahMeta ? (
             <SurahDetailView
@@ -587,7 +587,15 @@ export const App: React.FC = () => {
               )}
             </>
           )}
+
+        {/* Google AdMob GMA Next-Gen Test Banner Ad placed near the bottom when in tab views */}
+        {!selectedSurahMeta && <AdMobBanner />}
       </main>
+
+      {/* Google AdMob GMA Next-Gen Test Banner Ad always at the bottom when reading a surah */}
+      {selectedSurahMeta && (
+        <AdMobBanner fixedBottom={true} hasAudioBar={!!activeAudio} />
+      )}
 
       {/* Global Persistent Audio Player */}
       {activeAudio && (
@@ -640,11 +648,8 @@ export const App: React.FC = () => {
         </Suspense>
       )}
 
-      {/* Google Mobile Ads: Fixed AdMob Banner (Main Dashboard & While Reading) */}
-      <AdMobBanner language={language} />
-
-      {/* Google Mobile Ads: Interstitial Ad Overlay (On Exiting Quran, Duas, or Salah) */}
-      <AdMobInterstitialModal language={language} />
+      {/* Google AdMob GMA Next-Gen Interstitial Test Ad Overlay */}
+      <AdMobInterstitial />
     </div>
   );
 };
